@@ -1,0 +1,59 @@
+#circlePopup{
+    position:absolute;
+    width:auto;
+    height:auto;
+    position:absolute;
+    border-radius:5px;
+    padding: 5px 10px;
+    z-index:3000;
+    visibility: hidden;
+    top:0;
+    left:50%;
+    transform:translateX(-50%);
+    background-color: white;
+}
+#video{
+    height:auto;
+    width:100%;
+    position:absolute;
+    z-index:-10;
+}
+#canvas{
+    height:auto;
+    width:100%;
+    position:absolute;
+    z-index:10;
+}
+#circleTooltip{
+    width:auto;
+    height:auto;
+    position:absolute;
+    z-index:3000
+}
+
+.tooltip {
+    position: relative;
+	width: 180px;
+    height: 50px;
+    background-color:white;
+    border-radius: 20px;
+    display:flex;
+    align-items: center;
+    &__text{
+        display:flex;
+        margin:auto
+    }
+}
+
+.tooltip:before {
+	content: '';
+    background-color: white;
+    width: 50px;
+    height: 50px;
+    z-index: 10;
+    position: absolute;
+    bottom: -20px;
+    left: -30px;
+    transform: rotate(-55deg);
+    clip-path:polygon(0% 50%,100% 50%,100% 100%)
+}

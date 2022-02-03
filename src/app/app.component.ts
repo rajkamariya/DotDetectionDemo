@@ -107,7 +107,8 @@ export class AppComponent implements OnInit{
     cv.GaussianBlur(src,src,msize,0)
     cv.medianBlur(src,src,3) 
 
-    // cv.threshold(src,src,100,255,cv.THRESH_BINARY|cv.THRESH_OTSU)
+    // cv.threshold(src,src,90,300,cv.THRESH_BINARY|cv.THRESH_OTSU);
+    // cv.adaptiveThreshold(src, src, 100, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 3, 1);
     cv.Canny(src, src, 30, 100, 3, false);    
     let contours = new cv.MatVector();
     let hierarchy = new cv.Mat();
@@ -117,7 +118,8 @@ export class AppComponent implements OnInit{
 
     cv.findContours(src,contours,hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
     
-    cv.drawContours(dst,contours,-1, redColor, 1, 8, hierarchy, 1);
+    // cv.drawContours(dst,contours,-1, redColor, 1, 8, hierarchy, 1);
+
     let dots =[];
     for (let i = 0; i < contours.size(); ++i) {
       let tmp = new cv.Mat();
@@ -126,7 +128,7 @@ export class AppComponent implements OnInit{
       cv.convexHull(cnt, tmp, false, true);
       if(tmp.total()>8){
         let circle = cv.minEnclosingCircle(cnt);
-        let circleArea = (3.14*circle.radius*circle.radius)-((3.14*circle.radius*circle.radius)*25/100);
+        let circleArea = (3.14*circle.radius*circle.radius)-((3.14*circle.radius*circle.radius)*28/100);
         // let circleArea = (3.14*circle.radius*circle.radius)-50;        
         if(circleArea>0){
           
@@ -139,7 +141,7 @@ export class AppComponent implements OnInit{
             // console.log(circle.radius);
             // console.log(3.14*circle.radius*circle.radius)
 
-            if(circle.radius<15){
+            if(circle.radius<10){
               circle.center.x =Math.round(circle.center.x * videoOffset/videoHeight);
               circle.center.y =Math.round(circle.center.y * videoOffset/videoHeight); 
               circle.radius =Math.round(circle.radius * videoOffset/videoHeight);
@@ -215,11 +217,16 @@ export class AppComponent implements OnInit{
         this.showDefaultMessage = true;
       },2000);
       let color =greenColor; 
-      for(let j=1;j<dots.length;j++){
-        if(dots[j].center.y>(dots[0].center.y+10) || dots[j].center.y<(dots[0].center.y-10)){
-          color = redColor;
-          break;
-        }
+      // for(let j=1;j<dots.length;j++){
+      //   if(dots[j].center.y>(dots[0].center.y+15) || dots[j].center.y<(dots[0].center.y-15)){
+      //     color = redColor;
+      //     break;
+      //   }
+      // }
+      if(dots[1].center.y<(dots[0].center.y+20) && dots[1].center.y>(dots[0].center.y-20)){
+        color = greenColor;
+      }else{
+        color = redColor
       }
       for(let i=0;i<dots.length;i++){
         cv.circle(dst, dots[i].center, dots[i].radius,color);
@@ -227,9 +234,16 @@ export class AppComponent implements OnInit{
       if(color === greenColor){
           this.circlePopup.nativeElement.style.visibility = "visible";
           this.circlePopup.nativeElement.style.color = "green";
+          // let distance=dots[0].center.x-dots[1].center.x;
+          // if(distance<0){
+          //   distance = dots[1].center.x-dots[0].center.x;
+          // }
+          // distance = distance *0.0264583333;
+          
           this.circlePopup.nativeElement.innerHTML = "Now start performing the suture task";
       }else{
-        this.circlePopup.nativeElement.style.visibility = "hidden";
+        this.circlePopup.nativeElement.style.color = "red";
+        this.circlePopup.nativeElement.innerHTML = "Please place penrose drain into the middle of your camera view";
       }
     }
     console.log(dots)

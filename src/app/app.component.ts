@@ -81,7 +81,6 @@ export class AppComponent implements OnInit{
     })
   } 
   dotDetection(){
-    console.log("DOT Detection");
      // Do stuff
     let videoHeight = this.videoEle.nativeElement.videoHeight;
     let videoWidth = this.videoEle.nativeElement.videoWidth;
@@ -92,6 +91,7 @@ export class AppComponent implements OnInit{
     let src = new cv.Mat(this.videoEle.nativeElement.videoHeight,this.videoEle.nativeElement.videoWidth,cv.CV_8UC4)
     let cap = new cv.VideoCapture(this.videoEle.nativeElement);
     cap.read(src);
+    
 
     this.videoEle.nativeElement.height = this.videoEle.nativeElement.offsetHeight;
     this.videoEle.nativeElement.width = this.videoEle.nativeElement.offsetWidth;
@@ -234,19 +234,21 @@ export class AppComponent implements OnInit{
       if(color === greenColor){
           this.circlePopup.nativeElement.style.visibility = "visible";
           this.circlePopup.nativeElement.style.color = "green";
-          // let distance=dots[0].center.x-dots[1].center.x;
-          // if(distance<0){
-          //   distance = dots[1].center.x-dots[0].center.x;
-          // }
+          let distance=Math.sqrt((dots[1].center.x - dots[0].center.x)**2 + (dots[1].center.y - dots[0].center.y)**2)
+          
+          if(distance<0){
+            distance=Math.sqrt((dots[1].center.x - dots[0].center.x)**2 + (dots[1].center.y - dots[0].center.y)**2)
+          }
+          // To convert px into cm
           // distance = distance *0.0264583333;
           
-          this.circlePopup.nativeElement.innerHTML = "Now start performing the suture task";
+          this.circlePopup.nativeElement.innerHTML = "Distance="+Math.round(distance)+"px Now start performing the suture task";
       }else{
         this.circlePopup.nativeElement.style.color = "red";
         this.circlePopup.nativeElement.innerHTML = "Please place penrose drain into the middle of your camera view";
       }
     }
-    console.log(dots)
+    // console.log(dots)
 
     cv.imshow('canvas', dst);
     src.delete();

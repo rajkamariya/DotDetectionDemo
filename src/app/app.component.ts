@@ -141,14 +141,14 @@ export class AppComponent implements OnInit{
             // console.log(circle.radius);
             // console.log(3.14*circle.radius*circle.radius)
 
-            if(circle.radius<10){
+            if(circle.radius<25){
               circle.center.x =Math.round(circle.center.x * videoOffset/videoHeight);
               circle.center.y =Math.round(circle.center.y * videoOffset/videoHeight); 
               circle.radius =Math.round(circle.radius * videoOffset/videoHeight);
-              let leftEdge = this.videoEle.nativeElement.offsetWidth*20/100;
-              let rightEdge = this.videoEle.nativeElement.offsetWidth*80/100;
+              let leftEdge = this.videoEle.nativeElement.offsetWidth*10/100;
+              let rightEdge = this.videoEle.nativeElement.offsetWidth*90/100;
               let topEdge = this.videoEle.nativeElement.offsetHeight*10/100;
-              let bottomEdge = this.videoEle.nativeElement.offsetHeight*70/100;
+              let bottomEdge = this.videoEle.nativeElement.offsetHeight*80/100;
               let circleLeftX = circle.center.x-circle.radius;
               let circleRightX = circle.center.x+circle.radius;
               let circleTopY = circle.center.y-circle.radius;

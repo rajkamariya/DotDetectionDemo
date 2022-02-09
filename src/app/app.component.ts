@@ -1,5 +1,6 @@
 import { Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core';
 import { NgxOpenCVService, OpenCVState } from 'ngx-opencv';
+import { simpleBlobDetector } from './../assets/opencv/simpleBlobDetector';
 // import cv from 'opencv-ts';
 declare var cv: any; 
 
@@ -79,7 +80,8 @@ export class AppComponent implements OnInit{
       }
       
     })
-  } 
+  }
+  
   dotDetection(){
      // Do stuff
     let videoHeight = this.videoEle.nativeElement.videoHeight;
@@ -88,28 +90,37 @@ export class AppComponent implements OnInit{
     
     this.videoEle.nativeElement.height = this.videoEle.nativeElement.videoHeight;
     this.videoEle.nativeElement.width = this.videoEle.nativeElement.videoWidth;
-    let src = new cv.Mat(this.videoEle.nativeElement.videoHeight,this.videoEle.nativeElement.videoWidth,cv.CV_8UC4)
-    let cap = new cv.VideoCapture(this.videoEle.nativeElement);
-    cap.read(src);
+    // let src = new cv.Mat(this.videoEle.nativeElement.videoHeight,this.videoEle.nativeElement.videoWidth,cv.CV_8UC4)
+    // let cap = new cv.VideoCapture(this.videoEle.nativeElement);
+    // cap.read(src);
     
 
     this.videoEle.nativeElement.height = this.videoEle.nativeElement.offsetHeight;
     this.videoEle.nativeElement.width = this.videoEle.nativeElement.offsetWidth;
+    let src = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
+    let srccap = new cv.VideoCapture(this.videoEle.nativeElement);
+    srccap.read(src);
     let dst = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
     let dstcap = new cv.VideoCapture(this.videoEle.nativeElement);
     dstcap.read(dst);
     
-    cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
+    // cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
+    let low = new cv.Mat(src.rows, src.cols, src.type(), [100, 100, 100, 255]);
+    let high = new cv.Mat(src.rows, src.cols, src.type(), [255, 255, 255, 255]);
+    // You can try more different parameters
+    cv.inRange(src, low, high, src);
+    low.delete();
+    high.delete();
     let msize = new cv.Size(3, 3);
     // let anchor = new cv.Point(-1, -1);
         
     // cv.blur(src,src,ksize,anchor,) 
-    cv.GaussianBlur(src,src,msize,0)
-    cv.medianBlur(src,src,3) 
-
-    // cv.threshold(src,src,90,300,cv.THRESH_BINARY|cv.THRESH_OTSU);
+    // cv.GaussianBlur(src,src,msize,0)
+    // cv.medianBlur(src,src,3) 
+    // cv.threshold(src, src, 100, 255, cv.THRESH_BINARY);
+    cv.threshold(src,src,100,220,cv.THRESH_BINARY|cv.THRESH_OTSU);
     // cv.adaptiveThreshold(src, src, 100, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 3, 1);
-    cv.Canny(src, src, 30, 100, 3, false);    
+    cv.Canny(src, src, 30, 150, 3, false);   
     let contours = new cv.MatVector();
     let hierarchy = new cv.Mat();
 
@@ -128,27 +139,24 @@ export class AppComponent implements OnInit{
       cv.convexHull(cnt, tmp, false, true);
       if(tmp.total()>8){
         let circle = cv.minEnclosingCircle(cnt);
-        let circleArea = (3.14*circle.radius*circle.radius)-((3.14*circle.radius*circle.radius)*28/100);
+        let circleArea = (3.14*circle.radius*circle.radius)-((3.14*circle.radius*circle.radius)*25/100);
+        let contourArea = cv.contourArea(tmp) + (cv.contourArea(tmp)*5/100);
         // let circleArea = (3.14*circle.radius*circle.radius)-50;        
         if(circleArea>0){
           
           // console.log(3.14*circle.radius*circle.radius)
 
-          if(cv.contourArea(tmp)>circleArea)
+          if(contourArea>circleArea)
           {
-            // console.log(cv.contourArea(tmp))
-            // console.log(circleArea)  
-            // console.log(circle.radius);
-            // console.log(3.14*circle.radius*circle.radius)
 
             if(circle.radius<25){
-              circle.center.x =Math.round(circle.center.x * videoOffset/videoHeight);
-              circle.center.y =Math.round(circle.center.y * videoOffset/videoHeight); 
-              circle.radius =Math.round(circle.radius * videoOffset/videoHeight);
+              circle.center.x =circle.center.x;
+              circle.center.y =circle.center.y; 
+              circle.radius =circle.radius;
               let leftEdge = this.videoEle.nativeElement.offsetWidth*10/100;
               let rightEdge = this.videoEle.nativeElement.offsetWidth*90/100;
               let topEdge = this.videoEle.nativeElement.offsetHeight*10/100;
-              let bottomEdge = this.videoEle.nativeElement.offsetHeight*80/100;
+              let bottomEdge = this.videoEle.nativeElement.offsetHeight*70/100;
               let circleLeftX = circle.center.x-circle.radius;
               let circleRightX = circle.center.x+circle.radius;
               let circleTopY = circle.center.y-circle.radius;
@@ -163,10 +171,18 @@ export class AppComponent implements OnInit{
                 }
                 if(isDot)
                 {
-                  dots.push({center:circle.center,radius:circle.radius});
+                  let moms,center;
+                  moms = cv.moments(cnt);
+                  center = {
+                    confidence: 1,
+                    location: { x: moms.m10 / moms.m00, y: moms.m01 / moms.m00 },
+                  };
+                  let contourColor = dst.ucharAt(Math.round(center.location.y), Math.round(center.location.x))
+                  if(contourColor > 125){
+                  dots.push({index:i,center:circle.center,radius:circle.radius});
+                  }
                 }
               }
-              // cv.circle(dst, circle.center, circle.radius,greenColor);
             }
           }
         }
@@ -174,34 +190,7 @@ export class AppComponent implements OnInit{
       cnt.delete(); 
       tmp.delete();
     }
-    // console.log(dots)
-    // if(dots.length >1 ){
-    //   // dots.forEach((d) => {
-    //   //   console.log(d)
-    //   //   // console.log(`${c} - ${index} - ${chars.indexOf(c)}`);
-    //   // });
-    //   // dots = dots.filter((data,index)=>{
-    //   //   return dots.indexOf(data) === index;
-    //   // })
-    //   let color =greenColor; 
-    //   // for(let i=0;i<dots.length;i++){
-    //     for(let j=0;j<dots.length;j++){
-    //       if(dots[j].center.y>(dots[0].center.y+15) || dots[j].center.y<(dots[0].center.y-15)){
-    //         color = redColor;
-    //         break;
-    //       }
-    //       // }else{
-    //       //   color = redColor;
-    //       // }
-    //     // }
-    //     //   if()
-    //     // let center = new cv.Point(Math.round(dots[i].center.x),Math.round(dots[i].center.y))
-    //           // cv.circle(dst, dots[i].center, dots[i].radius,greenColor);
-    //   }
-    //   for(let i=0;i<dots.length;i++){
-    //     cv.circle(dst, dots[i].center, dots[i].radius,color);
-    //   }
-    // }
+
     if(dots.length <= 1){
       this.circlePopup.nativeElement.style.visibility = "visible";
       if(this.showDefaultMessage){  
@@ -217,19 +206,20 @@ export class AppComponent implements OnInit{
         this.showDefaultMessage = true;
       },2000);
       let color =greenColor; 
-      // for(let j=1;j<dots.length;j++){
-      //   if(dots[j].center.y>(dots[0].center.y+15) || dots[j].center.y<(dots[0].center.y-15)){
-      //     color = redColor;
-      //     break;
-      //   }
+        for(let j=1;j<dots.length;j++){
+          if(dots[j].center.y>(dots[0].center.y+15) || dots[j].center.y<(dots[0].center.y-15)){
+            color = redColor;
+            break;
+          }
+        }
+      // if(dots[1].center.y<(dots[0].center.y+20) && dots[1].center.y>(dots[0].center.y-20)){
+      //   color = greenColor;
+      // }else{
+      //   color = redColor
       // }
-      if(dots[1].center.y<(dots[0].center.y+20) && dots[1].center.y>(dots[0].center.y-20)){
-        color = greenColor;
-      }else{
-        color = redColor
-      }
       for(let i=0;i<dots.length;i++){
-        cv.circle(dst, dots[i].center, dots[i].radius,color);
+        // cv.drawContours(dst, contours, dots[i].index, color, 2, cv.LINE_8, hierarchy, 0);
+        cv.circle(dst, dots[i].center, dots[i].radius,color, 2);
       }
       if(color === greenColor){
           this.circlePopup.nativeElement.style.visibility = "visible";

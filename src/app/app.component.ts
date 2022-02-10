@@ -63,7 +63,7 @@ export class AppComponent implements OnInit{
           setInterval(()=>{  
           // setTimeout(()=>{ 
           if(this.videoEle.nativeElement.videoHeight>0){
-              this.dotDetection();
+              this.colorDetection();
             // }},2000)
           }
           },0); 
@@ -81,7 +81,144 @@ export class AppComponent implements OnInit{
       
     })
   }
-  
+  colorDetection(){
+    this.videoEle.nativeElement.height = this.videoEle.nativeElement.videoHeight;
+    this.videoEle.nativeElement.width = this.videoEle.nativeElement.videoWidth;
+    // let src = new cv.Mat(this.videoEle.nativeElement.videoHeight,this.videoEle.nativeElement.videoWidth,cv.CV_8UC4)
+    // let cap = new cv.VideoCapture(this.videoEle.nativeElement);
+    // cap.read(src);
+    
+
+    this.videoEle.nativeElement.height = this.videoEle.nativeElement.offsetHeight;
+    this.videoEle.nativeElement.width = this.videoEle.nativeElement.offsetWidth;
+    let src = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
+    let srccap = new cv.VideoCapture(this.videoEle.nativeElement);
+    srccap.read(src);
+    let dst = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
+    let dstcap = new cv.VideoCapture(this.videoEle.nativeElement);
+    dstcap.read(dst);
+    // let mask = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
+    // let maskcap = new cv.VideoCapture(this.videoEle.nativeElement);
+    // maskcap.read(mask);
+    // cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
+    let low = new cv.Mat(src.rows, src.cols, src.type(), [0, 0, 0, 255]);
+    let high = new cv.Mat(src.rows, src.cols, src.type(), [40, 40, 40, 255]);
+    // You can try more different parameters
+    // let mask = new cv.Mat();
+    
+    cv.inRange(src, low, high, src);
+    
+    low.delete();
+    high.delete();
+    // let msize = new cv.Size(3, 3);
+    // let anchor = new cv.Point(-1, -1);
+        
+    // cv.blur(src,src,ksize,anchor,) 
+    // cv.GaussianBlur(src,src,msize,0)
+    // cv.medianBlur(src,src,3) 
+    // cv.threshold(src, src, 100, 255, cv.THRESH_BINARY);
+    cv.threshold(src,src,100,220,cv.THRESH_BINARY|cv.THRESH_OTSU);
+    // cv.adaptiveThreshold(src, src, 100, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 3, 1);
+    cv.Canny(src, src, 30, 150, 3, false);   
+    let contours = new cv.MatVector();
+    let hierarchy = new cv.Mat();
+
+    let redColor = new cv.Scalar(255, 0, 0, 255);
+    let greenColor = new cv.Scalar(0, 255, 0, 255);
+
+    cv.findContours(src,contours,hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
+    
+    // cv.drawContours(dst,contours,-1, redColor, 1, 8, hierarchy, 1);
+    
+    let dots=[];
+    for (let i = 0; i < contours.size(); ++i) {
+      // let tmp = new cv.Mat();
+      let cnt = contours.get(i);
+      let circle = cv.minEnclosingCircle(cnt);
+      // let contourArea = cv.contourArea(cnt);
+      if(circle.radius < 10){
+        let leftEdge = this.videoEle.nativeElement.offsetWidth*20/100;
+        let rightEdge = this.videoEle.nativeElement.offsetWidth*80/100;
+        let topEdge = this.videoEle.nativeElement.offsetHeight*30/100;
+        let bottomEdge = this.videoEle.nativeElement.offsetHeight*90/100;
+        let circleLeftX = circle.center.x-circle.radius;
+        let circleRightX = circle.center.x+circle.radius;
+        let circleTopY = circle.center.y-circle.radius;
+        let circleBottomY = circle.center.y+circle.radius;
+        if(circleLeftX > leftEdge && circleRightX < rightEdge && circleTopY > topEdge &&circleBottomY < bottomEdge){
+          // const perimeter = cv.arcLength(cnt, true);
+          // const ratio = 4 * 3.14 * contourArea / (perimeter * perimeter);
+          // if(ratio > 0.70 && ratio < 1){
+            let isDot = true;
+            for(let i=0;i<dots.length;i++){
+              if(circle.center.x > (dots[i].center.x-2) && circle.center.x < (dots[i].center.x+2))
+              {
+                isDot = false;
+              }
+            }
+            if(isDot)
+            {
+              dots.push({index:i,center:circle.center,radius:circle.radius});      
+            }
+            // cv.circle(dst, circle.center, circle.radius,redColor, 2);
+          // }
+        }
+      }
+    }
+    if(dots.length <= 1){
+      this.circlePopup.nativeElement.style.visibility = "visible";
+      if(this.showDefaultMessage){  
+        this.circlePopup.nativeElement.style.color = "red";
+        this.circlePopup.nativeElement.innerHTML = "Please place penrose drain into the middle of your camera view";
+      }
+    }else if(dots.length > 1){
+      this.showDefaultMessage = false;
+      if(this.defualtMessageTimeout){
+        clearTimeout(this.defualtMessageTimeout);
+      }
+      this.defualtMessageTimeout=setTimeout(()=>{
+        this.showDefaultMessage = true;
+      },2000);
+      let color =greenColor; 
+        for(let j=1;j<dots.length;j++){
+          if(dots[j].center.y>(dots[0].center.y+15) || dots[j].center.y<(dots[0].center.y-15)){
+            color = redColor;
+            break;
+          }
+        }
+      // if(dots[1].center.y<(dots[0].center.y+20) && dots[1].center.y>(dots[0].center.y-20)){
+      //   color = greenColor;
+      // }else{
+      //   color = redColor
+      // }
+      for(let i=0;i<dots.length;i++){
+        // cv.drawContours(dst, contours, dots[i].index, color, 2, cv.LINE_8, hierarchy, 0);
+        cv.circle(dst, dots[i].center, dots[i].radius,color, 2);
+      }
+      if(color === greenColor){
+          this.circlePopup.nativeElement.style.visibility = "visible";
+          this.circlePopup.nativeElement.style.color = "green";
+          let distance=Math.sqrt((dots[1].center.x - dots[0].center.x)**2 + (dots[1].center.y - dots[0].center.y)**2)
+          
+          if(distance<0){
+            distance=Math.sqrt((dots[1].center.x - dots[0].center.x)**2 + (dots[1].center.y - dots[0].center.y)**2)
+          }
+          // To convert px into cm
+          // distance = distance *0.0264583333;
+          
+          this.circlePopup.nativeElement.innerHTML = "Distance="+Math.round(distance)+"px Now start performing the suture task";
+      }else{
+        this.circlePopup.nativeElement.style.color = "red";
+        this.circlePopup.nativeElement.innerHTML = "Please place penrose drain into the middle of your camera view";
+      }
+    }
+
+    cv.imshow('canvas', dst);
+    src.delete();
+    dst.delete();
+    contours.delete();
+    hierarchy.delete();
+  }
   dotDetection(){
      // Do stuff
     let videoHeight = this.videoEle.nativeElement.videoHeight;
@@ -103,12 +240,17 @@ export class AppComponent implements OnInit{
     let dst = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
     let dstcap = new cv.VideoCapture(this.videoEle.nativeElement);
     dstcap.read(dst);
-    
+    // let mask = new cv.Mat(this.videoEle.nativeElement.offsetHeight,this.videoEle.nativeElement.offsetWidth,cv.CV_8UC4)
+    // let maskcap = new cv.VideoCapture(this.videoEle.nativeElement);
+    // maskcap.read(mask);
     // cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
-    let low = new cv.Mat(src.rows, src.cols, src.type(), [100, 100, 100, 255]);
-    let high = new cv.Mat(src.rows, src.cols, src.type(), [255, 255, 255, 255]);
+    let low = new cv.Mat(src.rows, src.cols, src.type(), [0, 0, 0, 255]);
+    let high = new cv.Mat(src.rows, src.cols, src.type(), [50, 50, 50, 255]);
     // You can try more different parameters
+    // let mask = new cv.Mat();
+    
     cv.inRange(src, low, high, src);
+    
     low.delete();
     high.delete();
     let msize = new cv.Size(3, 3);
@@ -129,7 +271,7 @@ export class AppComponent implements OnInit{
 
     cv.findContours(src,contours,hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE)
     
-    // cv.drawContours(dst,contours,-1, redColor, 1, 8, hierarchy, 1);
+    cv.drawContours(dst,contours,-1, redColor, 1, 8, hierarchy, 1);
 
     let dots =[];
     for (let i = 0; i < contours.size(); ++i) {
@@ -156,7 +298,7 @@ export class AppComponent implements OnInit{
               let leftEdge = this.videoEle.nativeElement.offsetWidth*10/100;
               let rightEdge = this.videoEle.nativeElement.offsetWidth*90/100;
               let topEdge = this.videoEle.nativeElement.offsetHeight*10/100;
-              let bottomEdge = this.videoEle.nativeElement.offsetHeight*70/100;
+              let bottomEdge = this.videoEle.nativeElement.offsetHeight*90/100;
               let circleLeftX = circle.center.x-circle.radius;
               let circleRightX = circle.center.x+circle.radius;
               let circleTopY = circle.center.y-circle.radius;
@@ -179,7 +321,7 @@ export class AppComponent implements OnInit{
                   };
                   let contourColor = dst.ucharAt(Math.round(center.location.y), Math.round(center.location.x))
                   if(contourColor > 125){
-                  dots.push({index:i,center:circle.center,radius:circle.radius});
+                    dots.push({index:i,center:circle.center,radius:circle.radius});
                   }
                 }
               }

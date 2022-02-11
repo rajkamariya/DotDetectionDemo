@@ -107,9 +107,12 @@ export class AppComponent implements OnInit{
     // let mask = new cv.Mat();
     
     cv.inRange(src, low, high, src);
+    let M = cv.Mat.ones(5, 5, cv.CV_8U);
     
+    cv.morphologyEx(src, src, cv.MORPH_CLOSE, M);
     low.delete();
     high.delete();
+    M.delete();
     // let msize = new cv.Size(3, 3);
     // let anchor = new cv.Point(-1, -1);
         
@@ -117,9 +120,9 @@ export class AppComponent implements OnInit{
     // cv.GaussianBlur(src,src,msize,0)
     // cv.medianBlur(src,src,3) 
     // cv.threshold(src, src, 100, 255, cv.THRESH_BINARY);
-    cv.threshold(src,src,100,220,cv.THRESH_BINARY|cv.THRESH_OTSU);
+    // cv.threshold(src,src,100,220,cv.THRESH_BINARY|cv.THRESH_OTSU);
     // cv.adaptiveThreshold(src, src, 100, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 3, 1);
-    cv.Canny(src, src, 30, 150, 3, false);   
+    // cv.Canny(src, src, 30, 150, 3, false);   
     let contours = new cv.MatVector();
     let hierarchy = new cv.Mat();
 
@@ -135,36 +138,40 @@ export class AppComponent implements OnInit{
       // let tmp = new cv.Mat();
       let cnt = contours.get(i);
       let circle = cv.minEnclosingCircle(cnt);
-      // let contourArea = cv.contourArea(cnt);
-      if(circle.radius < 10){
-        let leftEdge = this.videoEle.nativeElement.offsetWidth*20/100;
-        let rightEdge = this.videoEle.nativeElement.offsetWidth*80/100;
-        let topEdge = this.videoEle.nativeElement.offsetHeight*30/100;
-        let bottomEdge = this.videoEle.nativeElement.offsetHeight*90/100;
-        let circleLeftX = circle.center.x-circle.radius;
-        let circleRightX = circle.center.x+circle.radius;
-        let circleTopY = circle.center.y-circle.radius;
-        let circleBottomY = circle.center.y+circle.radius;
-        if(circleLeftX > leftEdge && circleRightX < rightEdge && circleTopY > topEdge &&circleBottomY < bottomEdge){
-          // const perimeter = cv.arcLength(cnt, true);
-          // const ratio = 4 * 3.14 * contourArea / (perimeter * perimeter);
-          // if(ratio > 0.70 && ratio < 1){
-            let isDot = true;
-            for(let i=0;i<dots.length;i++){
-              if(circle.center.x > (dots[i].center.x-2) && circle.center.x < (dots[i].center.x+2))
-              {
-                isDot = false;
+      let contourArea = cv.contourArea(cnt);
+      if(contourArea > 0 && contourArea < 20)
+      {
+        if(circle.radius < 5){
+          let leftEdge = this.videoEle.nativeElement.offsetWidth*20/100;
+          let rightEdge = this.videoEle.nativeElement.offsetWidth*80/100;
+          let topEdge = this.videoEle.nativeElement.offsetHeight*30/100;
+          let bottomEdge = this.videoEle.nativeElement.offsetHeight*90/100;
+          let circleLeftX = circle.center.x-circle.radius;
+          let circleRightX = circle.center.x+circle.radius;
+          let circleTopY = circle.center.y-circle.radius;
+          let circleBottomY = circle.center.y+circle.radius;
+          if(circleLeftX > leftEdge && circleRightX < rightEdge && circleTopY > topEdge &&circleBottomY < bottomEdge){
+            // const perimeter = cv.arcLength(cnt, true);
+            // const ratio = 4 * 3.14 * contourArea / (perimeter * perimeter);
+            // if(ratio > 0.70 && ratio < 1){
+              let isDot = true;
+              for(let i=0;i<dots.length;i++){
+                if(circle.center.x > (dots[i].center.x-2) && circle.center.x < (dots[i].center.x+2))
+                {
+                  isDot = false;
+                }
               }
-            }
-            if(isDot)
-            {
-              dots.push({index:i,center:circle.center,radius:circle.radius});      
-            }
-            // cv.circle(dst, circle.center, circle.radius,redColor, 2);
-          // }
+              if(isDot)
+              {
+                dots.push({index:i,center:circle.center,radius:circle.radius});      
+              }
+              // cv.circle(dst, circle.center, circle.radius,redColor, 2);
+            // }
+          }
         }
       }
     }
+    console.log(dots)
     if(dots.length <= 1){
       this.circlePopup.nativeElement.style.visibility = "visible";
       if(this.showDefaultMessage){  
@@ -192,8 +199,10 @@ export class AppComponent implements OnInit{
       //   color = redColor
       // }
       for(let i=0;i<dots.length;i++){
-        // cv.drawContours(dst, contours, dots[i].index, color, 2, cv.LINE_8, hierarchy, 0);
+        // cv.drawContours(dst, contours, dots[i].index, greenColor, 1, cv.LINE_8, hierarchy, 0);
         cv.circle(dst, dots[i].center, dots[i].radius,color, 2);
+        // let k = contours.get(dots[i].index);
+        // this.circlePopup.nativeElement.innerHTML = cv.contourArea(k)+',radius='+dots[i].radius;
       }
       if(color === greenColor){
           this.circlePopup.nativeElement.style.visibility = "visible";
@@ -208,8 +217,9 @@ export class AppComponent implements OnInit{
           
           this.circlePopup.nativeElement.innerHTML = "Distance="+Math.round(distance)+"px Now start performing the suture task";
       }else{
+        this.circlePopup.nativeElement.style.visibility = "visible";
         this.circlePopup.nativeElement.style.color = "red";
-        this.circlePopup.nativeElement.innerHTML = "Please place penrose drain into the middle of your camera view";
+        this.circlePopup.nativeElement.innerHTML = "align the penrose drain horizontally";
       }
     }
 

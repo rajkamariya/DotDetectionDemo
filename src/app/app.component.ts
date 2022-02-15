@@ -102,12 +102,12 @@ export class AppComponent implements OnInit{
     // maskcap.read(mask);
     // cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY);
     let low = new cv.Mat(src.rows, src.cols, src.type(), [0, 0, 0, 255]);
-    let high = new cv.Mat(src.rows, src.cols, src.type(), [40, 40, 40, 255]);
+    let high = new cv.Mat(src.rows, src.cols, src.type(), [90, 80, 70, 255]);
     // You can try more different parameters
     // let mask = new cv.Mat();
     
     cv.inRange(src, low, high, src);
-    let M = cv.Mat.ones(5, 5, cv.CV_8U);
+    let M = cv.Mat.ones(2, 2, cv.CV_8U);
     
     cv.morphologyEx(src, src, cv.MORPH_CLOSE, M);
     low.delete();
@@ -122,7 +122,7 @@ export class AppComponent implements OnInit{
     // cv.threshold(src, src, 100, 255, cv.THRESH_BINARY);
     // cv.threshold(src,src,100,220,cv.THRESH_BINARY|cv.THRESH_OTSU);
     // cv.adaptiveThreshold(src, src, 100, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY_INV, 3, 1);
-    // cv.Canny(src, src, 30, 150, 3, false);   
+    // cv.Canny(src, src, 30, 120, 3, false);   
     let contours = new cv.MatVector();
     let hierarchy = new cv.Mat();
 
@@ -141,7 +141,7 @@ export class AppComponent implements OnInit{
       let contourArea = cv.contourArea(cnt);
       if(contourArea > 0 && contourArea < 20)
       {
-        if(circle.radius < 5){
+        if(circle.radius < 7){
           let leftEdge = this.videoEle.nativeElement.offsetWidth*20/100;
           let rightEdge = this.videoEle.nativeElement.offsetWidth*80/100;
           let topEdge = this.videoEle.nativeElement.offsetHeight*30/100;
